@@ -17,6 +17,8 @@ import copy
 import os
 # modified
 import json
+from glob import glob
+import pandas as pd
 
 import keras_tuner
 from tensorflow import keras
@@ -236,6 +238,22 @@ class AutoTuner(keras_tuner.engine.tuner.Tuner):
         best_trial_id_dict = {"best_trial_id":self.oracle.get_best_trials(1)[0].trial_id}
         with open(os.path.join(self.project_name, "best_trial_id.json"), "w", encoding="utf-8") as f:
             json.dump(best_trial_id_dict, f)
+        res = []
+        json_ls = glob("{0}/*/trial.json".format(self.project_name))
+        for i in json_ls :
+            # print(i, end="\r")
+            ls = []
+            with open(i) as f:
+                json_data = json.load(f)
+            loss = json_data["metrics"]["metrics"]["loss"]["observations"][0]["value"][0]
+            acc = json_data["metrics"]["metrics"]["accuracy"]["observations"][0]["value"][0]
+            val_loss = json_data["metrics"]["metrics"]["val_loss"]["observations"][0]["value"][0]
+            val_acc = json_data["metrics"]["metrics"]["val_accuracy"]["observations"][0]["value"][0]
+            ls = [json_data["trial_id"], loss, acc, val_loss, val_acc]
+            res.append(ls)
+        df = pd.DataFrame(res, 
+                  columns=["trial_id", "loss", "acc", "val_loss", "val_acc"])
+        df.to_csv("{0}/loss_acc.csv".format(self.project_name))
         return history
 
     def get_state(self):
