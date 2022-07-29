@@ -263,6 +263,7 @@ class AutoTuner(keras_tuner.engine.tuner.Tuner):
                 best_trial_id_dict["hparam"] = t_param
         df = pd.DataFrame(res, 
                   columns=["trial_id", "loss", "acc", "val_loss", "val_acc"])
+        df = df.set_index('trial_id')
         df.to_csv("{0}/loss_acc.csv".format(self.project_name))
         with open(os.path.join(self.project_name, "best_trial_id.json"), "w", encoding="utf-8") as f:
             json.dump(best_trial_id_dict, f)
