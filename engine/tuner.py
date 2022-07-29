@@ -235,14 +235,12 @@ class AutoTuner(keras_tuner.engine.tuner.Tuner):
         # print(self.oracle.get_best_trials(1)[0].trial_id)
         self._finished = True
         # modified
-        best_trial_id_dict = {"best_trial_id":self.oracle.get_best_trials(1)[0].trial_id}
-        with open(os.path.join(self.project_name, "best_trial_id.json"), "w", encoding="utf-8") as f:
-            json.dump(best_trial_id_dict, f)
         res = []
         json_ls = glob("{0}/*/trial.json".format(self.project_name))
         for i in json_ls :
             # print(i, end="\r")
             ls = []
+            t_param = {}
             with open(i) as f:
                 json_data = json.load(f)
             loss = json_data["metrics"]["metrics"]["loss"]["observations"][0]["value"][0]
@@ -251,9 +249,23 @@ class AutoTuner(keras_tuner.engine.tuner.Tuner):
             val_acc = json_data["metrics"]["metrics"]["val_accuracy"]["observations"][0]["value"][0]
             ls = [json_data["trial_id"], loss, acc, val_loss, val_acc]
             res.append(ls)
+            if json_data["trial_id"] == self.oracle.get_best_trials(1)[0].trial_id:
+                best_trial_id_dict = {"best_trial_id":self.oracle.get_best_trials(1)[0].trial_id}
+                hyperparameters = json_data["hyperparameters"]["values"]
+                t_param["normalize"] = hyperparameters["structured_data_block_1/normalize"]
+                t_param["num_layers"] = hyperparameters["structured_data_block_1/dense_block_1/num_layers"]
+                t_param["units_0"] = hyperparameters["structured_data_block_1/dense_block_1/units_0"]
+                t_param["block1_dropout"] = hyperparameters["structured_data_block_1/dense_block_1/dropout"]
+                t_param["units_1"] = hyperparameters["structured_data_block_1/dense_block_1/units_1"]
+                t_param["classification_head_1_dropout"] = hyperparameters["classification_head_1/dropout"]
+                t_param["optimizer"] = hyperparameters["optimizer"]
+                t_param["learning_rate"] = hyperparameters["learning_rate"]
+                best_trial_id_dict["hparam"] = t_param
         df = pd.DataFrame(res, 
                   columns=["trial_id", "loss", "acc", "val_loss", "val_acc"])
         df.to_csv("{0}/loss_acc.csv".format(self.project_name))
+        with open(os.path.join(self.project_name, "best_trial_id.json"), "w", encoding="utf-8") as f:
+            json.dump(best_trial_id_dict, f)
         return history
 
     def get_state(self):
